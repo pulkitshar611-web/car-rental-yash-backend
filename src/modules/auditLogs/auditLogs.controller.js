@@ -5,8 +5,8 @@ const getAuditLogs = async (req, res, next) => {
     try {
         const [logs] = await pool.execute(`
       SELECT al.*, au.username 
-      FROM AuditLogs al 
-      LEFT JOIN SystemAdmins au ON al.user_id = au.id 
+      FROM auditlogs al 
+      LEFT JOIN systemadmins au ON al.user_id = au.id 
       ORDER BY al.created_at DESC
     `);
         res.json(logs);
@@ -19,9 +19,9 @@ const exportRentalReport = async (req, res, next) => {
     try {
         const [rentals] = await pool.execute(`
       SELECT r.id, c.name as customerName, v.name as vehicleName, r.startDate, r.endDate, r.totalAmount, r.status 
-      FROM Rentals r 
-      JOIN Customers c ON r.customerId = c.id 
-      JOIN Vehicles v ON r.vehicleId = v.id
+      FROM rentals r 
+      JOIN customers c ON r.customerId = c.id 
+      JOIN vehicles v ON r.vehicleId = v.id
     `);
 
         const workbook = new ExcelJS.Workbook();

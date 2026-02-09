@@ -4,8 +4,8 @@ const getAllMaintenance = async (req, res, next) => {
     try {
         const [records] = await pool.execute(`
             SELECT m.*, v.name as vehicleName, v.plateNumber 
-            FROM Maintenance m
-            JOIN Vehicles v ON m.vehicleId = v.id
+            FROM maintenance m
+            JOIN vehicles v ON m.vehicleId = v.id
             WHERE m.deleted_at IS NULL
             ORDER BY m.serviceDate DESC
         `);
@@ -18,7 +18,7 @@ const getAllMaintenance = async (req, res, next) => {
 const getMaintenanceById = async (req, res, next) => {
     try {
         const [records] = await pool.execute(
-            'SELECT * FROM Maintenance WHERE id = ? AND deleted_at IS NULL',
+            'SELECT * FROM maintenance WHERE id = ? AND deleted_at IS NULL',
             [req.params.id]
         );
         if (records.length === 0) return res.status(404).json({ message: 'Maintenance record not found' });
@@ -34,15 +34,15 @@ const createMaintenance = async (req, res, next) => {
 
         // Insert Maintenance Record
         const [result] = await pool.execute(
-            'INSERT INTO Maintenance (vehicleId, reason, description, cost, status) VALUES (?, ?, ?, ?, ?)',
+            'INSERT INTO maintenance (vehicleId, reason, description, cost, status) VALUES (?, ?, ?, ?, ?)',
             [vehicleId, reason, description, cost, status || 'in_progress']
         );
 
         // Update Vehicle Status
         if (status !== 'completed') {
-            await pool.execute('UPDATE Vehicles SET status = ? WHERE id = ?', ['MAINTENANCE', vehicleId]);
+            await pool.execute('UPDATE vehicles SET status = ? WHERE id = ?', ['MAINTENANCE', vehicleId]);
         } else {
-            await pool.execute('UPDATE Vehicles SET status = ? WHERE id = ?', ['AVAILABLE', vehicleId]);
+            await pool.execute('UPDATE vehicles SET status = ? WHERE id = ?', ['AVAILABLE', vehicleId]);
         }
 
         res.status(201).json({
@@ -59,15 +59,15 @@ const updateMaintenance = async (req, res, next) => {
         const { vehicleId, reason, description, cost, status } = req.body;
 
         await pool.execute(
-            'UPDATE Maintenance SET vehicleId=?, reason=?, description=?, cost=?, status=? WHERE id=?',
+            'UPDATE maintenance SET vehicleId=?, reason=?, description=?, cost=?, status=? WHERE id=?',
             [vehicleId, reason, description, cost, status, req.params.id]
         );
 
         // Update Vehicle Status based on maintenance status
         if (status === 'completed') {
-            await pool.execute('UPDATE Vehicles SET status = ? WHERE id = ?', ['AVAILABLE', vehicleId]);
+            await pool.execute('UPDATE vehicles SET status = ? WHERE id = ?', ['AVAILABLE', vehicleId]);
         } else {
-            await pool.execute('UPDATE Vehicles SET status = ? WHERE id = ?', ['MAINTENANCE', vehicleId]);
+            await pool.execute('UPDATE vehicles SET status = ? WHERE id = ?', ['MAINTENANCE', vehicleId]);
         }
 
         res.json({ message: 'Maintenance record updated successfully' });
@@ -78,7 +78,7 @@ const updateMaintenance = async (req, res, next) => {
 
 const deleteMaintenance = async (req, res, next) => {
     try {
-        await pool.execute('UPDATE Maintenance SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?', [req.params.id]);
+        await pool.execute('UPDATE maintenance SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?', [req.params.id]);
         res.json({ message: 'Maintenance record deleted successfully' });
     } catch (error) {
         next(error);

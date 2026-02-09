@@ -13,7 +13,7 @@ async function seedAdmin() {
 
         console.log('Inserting admin into database...');
         const [result] = await pool.execute(
-            'INSERT INTO SystemAdmins (username, email, password_hash, role) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE password_hash = ?',
+            'INSERT INTO systemadmins (username, email, password_hash, role) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE password_hash = ?',
             [username, email, hash, 'SUPER_ADMIN', hash]
         );
 

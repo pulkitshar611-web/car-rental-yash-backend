@@ -22,7 +22,7 @@ const uploadDocument = async (req, res, next) => {
 
         // Implementation requirement: "Re-upload creates NEW row (no overwrite)"
         const [result] = await pool.execute(
-            'INSERT INTO Documents (customerId, documentType, fileUrl, status) VALUES (?, ?, ?, "uploaded")',
+            'INSERT INTO documents (customerId, documentType, fileUrl, status) VALUES (?, ?, ?, "uploaded")',
             [customerId, documentType, fileUrl]
         );
 
@@ -45,11 +45,11 @@ const verifyDocument = async (req, res, next) => {
             return res.status(400).json({ message: 'Invalid status. Use approved or rejected.' });
         }
 
-        const [doc] = await pool.execute('SELECT * FROM Documents WHERE id = ?', [id]);
+        const [doc] = await pool.execute('SELECT * FROM documents WHERE id = ?', [id]);
         if (doc.length === 0) return res.status(404).json({ message: 'Document not found' });
 
         await pool.execute(
-            'UPDATE Documents SET status = ? WHERE id = ?',
+            'UPDATE documents SET status = ? WHERE id = ?',
             [status, id]
         );
 
@@ -63,8 +63,8 @@ const getAllDocuments = async (req, res, next) => {
     try {
         const [docs] = await pool.execute(`
             SELECT d.*, c.name as customerName 
-            FROM Documents d
-            JOIN Customers c ON d.customerId = c.id
+            FROM documents d
+            JOIN customers c ON d.customerId = c.id
             ORDER BY d.created_at DESC
         `);
         res.json(docs);
@@ -76,7 +76,7 @@ const getAllDocuments = async (req, res, next) => {
 const getCustomerDocuments = async (req, res, next) => {
     try {
         const [docs] = await pool.execute(
-            'SELECT * FROM Documents WHERE customerId = ? ORDER BY created_at DESC',
+            'SELECT * FROM documents WHERE customerId = ? ORDER BY created_at DESC',
             [req.params.customerId]
         );
         res.json(docs);
@@ -88,7 +88,7 @@ const getCustomerDocuments = async (req, res, next) => {
 const deleteDocument = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const [result] = await pool.execute('DELETE FROM Documents WHERE id = ?', [id]);
+        const [result] = await pool.execute('DELETE FROM documents WHERE id = ?', [id]);
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Document not found' });
         }

@@ -4,6 +4,9 @@ const { generateToken } = require('../../utils/jwt');
 
 const login = async (req, res, next) => {
     try {
+        if (!req.body) {
+            return res.status(400).json({ message: 'Request body is missing' });
+        }
         const { username, password } = req.body;
 
         if (!username || !password) {
@@ -11,7 +14,7 @@ const login = async (req, res, next) => {
         }
 
         const [users] = await pool.execute(
-            'SELECT * FROM SystemAdmins WHERE (username = ? OR email = ?) AND deleted_at IS NULL',
+            'SELECT * FROM systemadmins WHERE (username = ? OR email = ?) AND deleted_at IS NULL',
             [username, username]
         );
 
@@ -50,7 +53,7 @@ const getProfile = async (req, res, next) => {
     try {
         const userId = req.user.id;
         const [users] = await pool.execute(
-            'SELECT id, username, email, full_name, phone, address, role, created_at FROM SystemAdmins WHERE id = ?',
+            'SELECT id, username, email, full_name, phone, address, role, created_at FROM systemadmins WHERE id = ?',
             [userId]
         );
 
@@ -72,7 +75,7 @@ const updateProfile = async (req, res, next) => {
         // Check email uniqueness if changing
         if (email) {
             const [existing] = await pool.execute(
-                'SELECT id FROM SystemAdmins WHERE email = ? AND id != ?',
+                'SELECT id FROM systemadmins WHERE email = ? AND id != ?',
                 [email, userId]
             );
             if (existing.length > 0) {
@@ -81,7 +84,7 @@ const updateProfile = async (req, res, next) => {
         }
 
         await pool.execute(
-            'UPDATE SystemAdmins SET full_name = ?, email = ?, phone = ?, address = ? WHERE id = ?',
+            'UPDATE systemadmins SET full_name = ?, email = ?, phone = ?, address = ? WHERE id = ?',
             [full_name, email, phone, address, userId]
         );
 
@@ -100,7 +103,7 @@ const changePassword = async (req, res, next) => {
             return res.status(400).json({ message: 'Current and new password required' });
         }
 
-        const [users] = await pool.execute('SELECT password_hash FROM SystemAdmins WHERE id = ?', [userId]);
+        const [users] = await pool.execute('SELECT password_hash FROM systemadmins WHERE id = ?', [userId]);
         if (users.length === 0) return res.status(404).json({ message: 'User not found' });
 
         const user = users[0];
@@ -112,7 +115,7 @@ const changePassword = async (req, res, next) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-        await pool.execute('UPDATE SystemAdmins SET password_hash = ? WHERE id = ?', [hashedPassword, userId]);
+        await pool.execute('UPDATE systemadmins SET password_hash = ? WHERE id = ?', [hashedPassword, userId]);
 
         res.json({ message: 'Password changed successfully' });
     } catch (error) {

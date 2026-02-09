@@ -7,7 +7,7 @@ const pool = require('../../config/db');
 
 const getAllCustomers = async (req, res, next) => {
     try {
-        const [customers] = await pool.execute('SELECT id, name, phone, email, address, idNumber, status, outstandingBalance, created_at FROM Customers WHERE deleted_at IS NULL');
+        const [customers] = await pool.execute('SELECT id, name, phone, email, address, idNumber, status, outstandingBalance, created_at FROM customers WHERE deleted_at IS NULL');
         res.json(customers);
     } catch (error) {
         next(error);
@@ -17,7 +17,7 @@ const getAllCustomers = async (req, res, next) => {
 const getCustomerById = async (req, res, next) => {
     try {
         const [customers] = await pool.execute(
-            'SELECT id, name, phone, email, address, idNumber, status, outstandingBalance, created_at FROM Customers WHERE id = ? AND deleted_at IS NULL',
+            'SELECT id, name, phone, email, address, idNumber, status, outstandingBalance, created_at FROM customers WHERE id = ? AND deleted_at IS NULL',
             [req.params.id]
         );
         if (customers.length === 0) return res.status(404).json({ message: 'Customer not found' });
@@ -35,7 +35,7 @@ const createCustomer = async (req, res, next) => {
         }
 
         const [result] = await pool.execute(
-            'INSERT INTO Customers (name, phone, email, address, idNumber, status, outstandingBalance) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO customers (name, phone, email, address, idNumber, status, outstandingBalance) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [name, phone, email || null, address || null, idNumber || null, status || 'active', outstandingBalance || 0]
         );
 
@@ -64,7 +64,7 @@ const updateCustomer = async (req, res, next) => {
         const { name, phone, email, address, idNumber, status, outstandingBalance } = req.body;
 
         await pool.execute(
-            'UPDATE Customers SET name = ?, phone = ?, email = ?, address = ?, idNumber = ?, status = ?, outstandingBalance = ? WHERE id = ?',
+            'UPDATE customers SET name = ?, phone = ?, email = ?, address = ?, idNumber = ?, status = ?, outstandingBalance = ? WHERE id = ?',
             [name, phone, email || null, address || null, idNumber || null, status || 'active', outstandingBalance || 0, id]
         );
 

@@ -5,7 +5,7 @@ const { logAction } = require('../../utils/logger');
 
 const getAllVehicles = async (req, res, next) => {
     try {
-        const [vehicles] = await pool.execute('SELECT * FROM Vehicles WHERE deleted_at IS NULL');
+        const [vehicles] = await pool.execute('SELECT * FROM vehicles WHERE deleted_at IS NULL');
         res.json(vehicles);
     } catch (error) {
         next(error);
@@ -15,7 +15,7 @@ const getAllVehicles = async (req, res, next) => {
 const getVehicleById = async (req, res, next) => {
     try {
         const [vehicles] = await pool.execute(
-            'SELECT * FROM Vehicles WHERE id = ? AND deleted_at IS NULL',
+            'SELECT * FROM vehicles WHERE id = ? AND deleted_at IS NULL',
             [req.params.id]
         );
         if (vehicles.length === 0) return res.status(404).json({ message: 'Vehicle not found' });
@@ -32,7 +32,7 @@ const createVehicle = async (req, res, next) => {
         const { name, model, plateNumber, dailyPrice, status, insuranceRequired, imageUrl } = req.body;
 
         const [result] = await pool.execute(
-            'INSERT INTO Vehicles (name, model, plateNumber, dailyPrice, status, insuranceRequired, imageUrl) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO vehicles (name, model, plateNumber, dailyPrice, status, insuranceRequired, imageUrl) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [name, model, plateNumber, dailyPrice, (status || 'AVAILABLE').toUpperCase(), insuranceRequired || 0, imageUrl || null]
         );
 
@@ -41,9 +41,9 @@ const createVehicle = async (req, res, next) => {
         // Generate QR Code URL
         const qrCodeUrl = `/public/qr-booking?vehicleId=${vehicleId}`;
 
-        await pool.execute('UPDATE Vehicles SET qrCodeUrl = ? WHERE id = ?', [qrCodeUrl, vehicleId]);
+        await pool.execute('UPDATE vehicles SET qrCodeUrl = ? WHERE id = ?', [qrCodeUrl, vehicleId]);
 
-        await logAction(req.user.id, 'CREATE_VEHICLE', 'Vehicles', vehicleId, null, req.body);
+        await logAction(req.user.id, 'CREATE_VEHICLE', 'vehicles', vehicleId, null, req.body);
 
         res.status(201).json({
             id: vehicleId,
@@ -58,16 +58,16 @@ const createVehicle = async (req, res, next) => {
 const updateVehicle = async (req, res, next) => {
     try {
         const { name, model, plateNumber, dailyPrice, status, insuranceRequired, imageUrl } = req.body;
-        const [oldVehicle] = await pool.execute('SELECT * FROM Vehicles WHERE id = ?', [req.params.id]);
+        const [oldVehicle] = await pool.execute('SELECT * FROM vehicles WHERE id = ?', [req.params.id]);
 
         if (oldVehicle.length === 0) return res.status(404).json({ message: 'Vehicle not found' });
 
         await pool.execute(
-            'UPDATE Vehicles SET name=?, model=?, plateNumber=?, dailyPrice=?, status=?, insuranceRequired=?, imageUrl=? WHERE id=?',
+            'UPDATE vehicles SET name=?, model=?, plateNumber=?, dailyPrice=?, status=?, insuranceRequired=?, imageUrl=? WHERE id=?',
             [name, model, plateNumber, dailyPrice, (status || oldVehicle[0].status).toUpperCase(), insuranceRequired, imageUrl, req.params.id]
         );
 
-        await logAction(req.user.id, 'UPDATE_VEHICLE', 'Vehicles', req.params.id, oldVehicle[0], req.body);
+        await logAction(req.user.id, 'UPDATE_VEHICLE', 'vehicles', req.params.id, oldVehicle[0], req.body);
 
         res.json({ message: 'Vehicle updated successfully' });
     } catch (error) {
@@ -77,8 +77,8 @@ const updateVehicle = async (req, res, next) => {
 
 const deleteVehicle = async (req, res, next) => {
     try {
-        await pool.execute('UPDATE Vehicles SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?', [req.params.id]);
-        await logAction(req.user.id, 'DELETE_VEHICLE', 'Vehicles', req.params.id);
+        await pool.execute('UPDATE vehicles SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?', [req.params.id]);
+        await logAction(req.user.id, 'DELETE_VEHICLE', 'vehicles', req.params.id);
         res.json({ message: 'Vehicle soft-deleted successfully' });
     } catch (error) {
         next(error);
