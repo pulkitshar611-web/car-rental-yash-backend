@@ -3,7 +3,7 @@ const pool = require('../../config/db');
 const getSettings = async (req, res, next) => {
     try {
         const { key } = req.params;
-        const [rows] = await pool.execute('SELECT setting_value FROM SystemSettings WHERE setting_key = ?', [key]);
+        const [rows] = await pool.execute('SELECT setting_value FROM settings WHERE setting_key = ?', [key]);
 
         if (rows.length === 0) {
             // Return default structure if not found to avoid client crashes
@@ -38,12 +38,10 @@ const updateSettings = async (req, res, next) => {
         }
 
         // Ensure value is stored as a JSON string
-        // If value is an object, JSON.stringify it. If string, keep it?
-        // Ideally we expect an object from frontend which express.json() parsed.
         const stringValue = typeof value === 'object' ? JSON.stringify(value) : value;
 
         await pool.execute(
-            'INSERT INTO SystemSettings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?',
+            'INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?',
             [key, stringValue, stringValue]
         );
 
@@ -56,7 +54,7 @@ const updateSettings = async (req, res, next) => {
 
 const getAllSettings = async (req, res, next) => {
     try {
-        const [rows] = await pool.execute('SELECT setting_key, setting_value FROM SystemSettings');
+        const [rows] = await pool.execute('SELECT setting_key, setting_value FROM settings');
 
         const defaultSettings = {
             security: {

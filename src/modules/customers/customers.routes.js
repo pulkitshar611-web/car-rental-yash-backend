@@ -4,12 +4,15 @@ const customerController = require('./customers.controller');
 const docController = require('../documents/documents.controller');
 const { authenticate, authorize } = require('../../middlewares/auth.middleware');
 
-// Admin Routes
-router.get('/', authenticate, authorize(['SUPER_ADMIN', 'MANAGER', 'STAFF']), customerController.getAllCustomers);
-router.get('/:id', authenticate, authorize(['SUPER_ADMIN', 'MANAGER', 'STAFF']), customerController.getCustomerById);
+// Public Routes (for frontend to fetch data)
+router.get('/', customerController.getAllCustomers);
+router.get('/:id', customerController.getCustomerById);
+
+// Admin Routes (protected)
+router.post('/', authenticate, authorize(['SUPER_ADMIN', 'MANAGER', 'STAFF']), customerController.createCustomer);
 router.put('/:id', authenticate, authorize(['SUPER_ADMIN', 'MANAGER', 'STAFF']), customerController.updateCustomer);
 
-// Requirement: GET /customers/:id/documents
+// Customer documents
 router.get('/:customerId/documents', authenticate, authorize(['SUPER_ADMIN', 'MANAGER', 'STAFF']), docController.getCustomerDocuments);
 
 module.exports = router;

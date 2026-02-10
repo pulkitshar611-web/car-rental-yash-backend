@@ -2,13 +2,13 @@ const pool = require('../../config/db');
 
 /**
  * Customers Controller
- * Strictly following the schema: id, name, email, phone (unique), address, status (active, inactive), outstandingBalance
+ * Schema: id, name, phone, email, idNumber, address, insurance, depositPaid, paymentMethod, outstandingBalance, rentalType
  */
 
 const getAllCustomers = async (req, res, next) => {
     try {
-        const [customers] = await pool.execute('SELECT id, name, phone, email, address, idNumber, status, outstandingBalance, created_at FROM Customers WHERE deleted_at IS NULL');
-        res.json(customers);
+        const [rows] = await pool.execute('SELECT * FROM customers ORDER BY created_at DESC');
+        res.json(rows);
     } catch (error) {
         next(error);
     }
@@ -16,12 +16,9 @@ const getAllCustomers = async (req, res, next) => {
 
 const getCustomerById = async (req, res, next) => {
     try {
-        const [customers] = await pool.execute(
-            'SELECT id, name, phone, email, address, idNumber, status, outstandingBalance, created_at FROM Customers WHERE id = ? AND deleted_at IS NULL',
-            [req.params.id]
-        );
-        if (customers.length === 0) return res.status(404).json({ message: 'Customer not found' });
-        res.json(customers[0]);
+        const [rows] = await pool.execute('SELECT * FROM customers WHERE id = ?', [req.params.id]);
+        if (rows.length === 0) return res.status(404).json({ message: 'Customer not found' });
+        res.json(rows[0]);
     } catch (error) {
         next(error);
     }
@@ -29,27 +26,16 @@ const getCustomerById = async (req, res, next) => {
 
 const createCustomer = async (req, res, next) => {
     try {
-        const { name, phone, email, address, idNumber, status, outstandingBalance } = req.body;
-        if (!name || !phone) {
-            return res.status(400).json({ message: 'Name and phone are required' });
-        }
+        const { name, phone, email, idNumber, address, insurance, depositPaid, paymentMethod, outstandingBalance, rentalType } = req.body;
 
         const [result] = await pool.execute(
-            'INSERT INTO Customers (name, phone, email, address, idNumber, status, outstandingBalance) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [name, phone, email || null, address || null, idNumber || null, status || 'active', outstandingBalance || 0]
+            'INSERT INTO customers (name, phone, email, idNumber, address, insurance, depositPaid, paymentMethod, outstandingBalance, rentalType) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [name, phone, email || null, idNumber || null, address || null, insurance ? 1 : 0, depositPaid ? 1 : 0, paymentMethod || 'cash', outstandingBalance || 0, rentalType || 'weekly']
         );
 
-        res.status(201).json({
-            id: result.insertId,
-            name,
-            phone,
-            email,
-            address,
-            idNumber,
-            status: status || 'active',
-            outstandingBalance: outstandingBalance || 0,
-            message: 'Customer created successfully'
-        });
+        const [newCustomers] = await pool.execute('SELECT * FROM customers WHERE id = ?', [result.insertId]);
+
+        res.status(201).json(newCustomers[0]);
     } catch (error) {
         if (error.code === 'ER_DUP_ENTRY') {
             return res.status(400).json({ message: 'Phone number already exists' });
@@ -61,15 +47,52 @@ const createCustomer = async (req, res, next) => {
 const updateCustomer = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { name, phone, email, address, idNumber, status, outstandingBalance } = req.body;
 
-        await pool.execute(
-            'UPDATE Customers SET name = ?, phone = ?, email = ?, address = ?, idNumber = ?, status = ?, outstandingBalance = ? WHERE id = ?',
-            [name, phone, email || null, address || null, idNumber || null, status || 'active', outstandingBalance || 0, id]
-        );
+        console.log('--------------------------------------------------');
+        console.log(`[UPDATE CUSTOMER] ID: ${id}`);
+        console.log('[BODY]', JSON.stringify(req.body, null, 2));
 
-        res.json({ message: 'Customer updated successfully' });
+        const allowedFields = ['name', 'phone', 'email', 'idNumber', 'address', 'insurance', 'depositPaid', 'paymentMethod', 'outstandingBalance', 'rentalType'];
+        const updates = [];
+        const params = [];
+
+        allowedFields.forEach(field => {
+            if (req.body[field] !== undefined) {
+                updates.push(`${field} = ?`);
+                if (field === 'insurance' || field === 'depositPaid') {
+                    params.push(req.body[field] ? 1 : 0);
+                } else if (field === 'outstandingBalance') {
+                    params.push(parseFloat(req.body[field]) || 0);
+                } else {
+                    params.push(req.body[field]);
+                }
+            }
+        });
+
+        if (updates.length === 0) {
+            return res.status(400).json({ message: 'No fields to update' });
+        }
+
+        params.push(id);
+
+        const query = `UPDATE customers SET ${updates.join(', ')} WHERE id = ?`;
+
+        console.log('[SQL QUERY]', query);
+        console.log('[SQL PARAMS]', params);
+
+        await pool.execute(query, params);
+
+        console.log(`[UPDATE SUCCESS] Customer ${id} updated.`);
+        console.log('--------------------------------------------------');
+
+        // Fetch updated customer to return
+        const [rows] = await pool.execute('SELECT * FROM customers WHERE id = ?', [id]);
+        res.json(rows[0]);
     } catch (error) {
+        console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+        console.error('[UPDATE CUSTOMER ERROR]', error.message);
+        console.error('[ERROR STACK]', error.stack);
+        console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
         next(error);
     }
 };

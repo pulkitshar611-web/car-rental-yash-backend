@@ -2,27 +2,23 @@ const pool = require('../../config/db');
 
 const getAllMaintenance = async (req, res, next) => {
     try {
-        const [records] = await pool.execute(`
+        const [rows] = await pool.execute(`
             SELECT m.*, v.name as vehicleName, v.plateNumber 
-            FROM Maintenance m
-            JOIN Vehicles v ON m.vehicleId = v.id
-            WHERE m.deleted_at IS NULL
+            FROM maintenance m
+            JOIN vehicles v ON m.vehicleId = v.id
             ORDER BY m.serviceDate DESC
         `);
-        res.json(records);
+        res.json(rows);
     } catch (error) {
         next(error);
     }
 };
 
-const getMaintenanceById = async (req, res, next) => {
+const getVehicleMaintenance = async (req, res, next) => {
     try {
-        const [records] = await pool.execute(
-            'SELECT * FROM Maintenance WHERE id = ? AND deleted_at IS NULL',
-            [req.params.id]
-        );
-        if (records.length === 0) return res.status(404).json({ message: 'Maintenance record not found' });
-        res.json(records[0]);
+        const { vehicleId } = req.params;
+        const [rows] = await pool.execute('SELECT * FROM maintenance WHERE vehicleId = ? ORDER BY serviceDate DESC', [vehicleId]);
+        res.json(rows);
     } catch (error) {
         next(error);
     }
@@ -30,19 +26,16 @@ const getMaintenanceById = async (req, res, next) => {
 
 const createMaintenance = async (req, res, next) => {
     try {
-        const { vehicleId, reason, description, cost, status } = req.body;
+        const { vehicleId, serviceDate, reason, description, expectedReturnDate, cost, status } = req.body;
 
-        // Insert Maintenance Record
         const [result] = await pool.execute(
-            'INSERT INTO Maintenance (vehicleId, reason, description, cost, status) VALUES (?, ?, ?, ?, ?)',
-            [vehicleId, reason, description, cost, status || 'in_progress']
+            'INSERT INTO maintenance (vehicleId, serviceDate, reason, description, expectedReturnDate, cost, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [vehicleId, serviceDate || new Date().toISOString().split('T')[0], reason || 'repair', description, expectedReturnDate || null, cost || 0, status || 'scheduled']
         );
 
-        // Update Vehicle Status
+        // Update vehicle status
         if (status !== 'completed') {
-            await pool.execute('UPDATE Vehicles SET status = ? WHERE id = ?', ['MAINTENANCE', vehicleId]);
-        } else {
-            await pool.execute('UPDATE Vehicles SET status = ? WHERE id = ?', ['AVAILABLE', vehicleId]);
+            await pool.execute('UPDATE vehicles SET status = "maintenance" WHERE id = ?', [vehicleId]);
         }
 
         res.status(201).json({
@@ -56,18 +49,26 @@ const createMaintenance = async (req, res, next) => {
 
 const updateMaintenance = async (req, res, next) => {
     try {
-        const { vehicleId, reason, description, cost, status } = req.body;
+        const { id } = req.params;
+        const { status, cost, description, reason, serviceDate, expectedReturnDate, vehicleId } = req.body;
 
         await pool.execute(
-            'UPDATE Maintenance SET vehicleId=?, reason=?, description=?, cost=?, status=? WHERE id=?',
-            [vehicleId, reason, description, cost, status, req.params.id]
+            `UPDATE maintenance SET 
+                status = COALESCE(?, status), 
+                cost = COALESCE(?, cost), 
+                description = COALESCE(?, description),
+                reason = COALESCE(?, reason),
+                serviceDate = COALESCE(?, serviceDate),
+                expectedReturnDate = COALESCE(?, expectedReturnDate)
+             WHERE id = ?`,
+            [status, cost, description, reason, serviceDate, expectedReturnDate, id]
         );
 
-        // Update Vehicle Status based on maintenance status
-        if (status === 'completed') {
-            await pool.execute('UPDATE Vehicles SET status = ? WHERE id = ?', ['AVAILABLE', vehicleId]);
-        } else {
-            await pool.execute('UPDATE Vehicles SET status = ? WHERE id = ?', ['MAINTENANCE', vehicleId]);
+        // If status changed to completed, update vehicle status back to available
+        if (status === 'completed' && vehicleId) {
+            await pool.execute('UPDATE vehicles SET status = "available" WHERE id = ?', [vehicleId]);
+        } else if (status !== 'completed' && vehicleId) {
+            await pool.execute('UPDATE vehicles SET status = "maintenance" WHERE id = ?', [vehicleId]);
         }
 
         res.json({ message: 'Maintenance record updated successfully' });
@@ -76,13 +77,21 @@ const updateMaintenance = async (req, res, next) => {
     }
 };
 
-const deleteMaintenance = async (req, res, next) => {
+const getMaintenanceById = async (req, res, next) => {
     try {
-        await pool.execute('UPDATE Maintenance SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?', [req.params.id]);
-        res.json({ message: 'Maintenance record deleted successfully' });
+        const { id } = req.params;
+        const [rows] = await pool.execute(`
+            SELECT m.*, v.name as vehicleName, v.plateNumber 
+            FROM maintenance m
+            JOIN vehicles v ON m.vehicleId = v.id
+            WHERE m.id = ?
+        `, [id]);
+
+        if (rows.length === 0) return res.status(404).json({ message: 'Maintenance record not found' });
+        res.json(rows[0]);
     } catch (error) {
         next(error);
     }
 };
 
-module.exports = { getAllMaintenance, getMaintenanceById, createMaintenance, updateMaintenance, deleteMaintenance };
+module.exports = { getAllMaintenance, getVehicleMaintenance, getMaintenanceById, createMaintenance, updateMaintenance };

@@ -10,6 +10,8 @@ const paymentRoutes = require('../modules/payments/payments.routes');
 const auditRoutes = require('../modules/auditLogs/auditLogs.routes');
 const settingsRoutes = require('../modules/settings/settings.routes');
 const maintenanceRoutes = require('../modules/maintenance/maintenance.routes');
+const qrRoutes = require('../modules/qr/qr.routes');
+const dashboardRoutes = require('../modules/dashboard/dashboard.routes');
 
 router.use('/auth', authRoutes);
 router.use('/vehicles', vehicleRoutes);
@@ -20,5 +22,7 @@ router.use('/payments', paymentRoutes);
 router.use('/reports', auditRoutes);
 router.use('/settings', settingsRoutes);
 router.use('/maintenance', maintenanceRoutes);
+router.use('/qr', qrRoutes);
+router.use('/dashboard', dashboardRoutes);
 
 module.exports = router;
