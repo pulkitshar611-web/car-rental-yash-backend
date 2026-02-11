@@ -7,7 +7,8 @@ module.exports = {
         HOST: process.env.DB_HOST || 'localhost',
         USER: process.env.DB_USER || 'root',
         PASS: process.env.DB_PASSWORD || '',
-        NAME: process.env.DB_NAME || 'car'
+        NAME: process.env.DB_NAME || 'car',
+        PORT: process.env.DB_PORT || 3306
     },
     SMTP: {
         HOST: process.env.SMTP_HOST,
