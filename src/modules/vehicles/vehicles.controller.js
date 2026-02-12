@@ -5,7 +5,7 @@ const { logAction } = require('../../utils/logger');
 
 const getAllVehicles = async (req, res, next) => {
     try {
-        const [vehicles] = await pool.execute('SELECT * FROM vehicles');
+        const [vehicles] = await pool.execute('SELECT * FROM vehicles WHERE is_deleted = 0');
         res.json(vehicles);
     } catch (error) {
         next(error);
@@ -15,7 +15,7 @@ const getAllVehicles = async (req, res, next) => {
 const getVehicleById = async (req, res, next) => {
     try {
         const [vehicles] = await pool.execute(
-            'SELECT * FROM vehicles WHERE id = ?',
+            'SELECT * FROM vehicles WHERE id = ? AND is_deleted = 0',
             [req.params.id]
         );
         if (vehicles.length === 0) return res.status(404).json({ message: 'Vehicle not found' });
@@ -32,7 +32,7 @@ const createVehicle = async (req, res, next) => {
         const { name, model, plateNumber, dailyPrice, status, insuranceRequired, image } = req.body;
 
         const [result] = await pool.execute(
-            'INSERT INTO vehicles (name, model, plateNumber, dailyPrice, status, insuranceRequired, image) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO vehicles (name, model, plateNumber, dailyPrice, status, insuranceRequired, image, is_deleted) VALUES (?, ?, ?, ?, ?, ?, ?, 0)',
             [name, model, plateNumber, dailyPrice, status || 'available', insuranceRequired || 0, image || null]
         );
 
@@ -84,10 +84,10 @@ const updateVehicle = async (req, res, next) => {
 
 const deleteVehicle = async (req, res, next) => {
     try {
-        // Instead of hard delete or missing 'deleted_at', we set status to 'outOfService'
-        await pool.execute('UPDATE vehicles SET status = "outOfService" WHERE id = ?', [req.params.id]);
+        // Soft delete: set is_deleted = 1
+        await pool.execute('UPDATE vehicles SET is_deleted = 1 WHERE id = ?', [req.params.id]);
         await logAction(req.user.id, 'DELETE_VEHICLE', 'Vehicles', req.params.id);
-        res.json({ message: 'Vehicle marked as out of service' });
+        res.json({ message: 'Vehicle deleted successfully' });
     } catch (error) {
         next(error);
     }

@@ -1,0 +1,2 @@
+ALTER TABLE vehicles ADD COLUMN is_deleted TINYINT(1) DEFAULT 0;
+ALTER TABLE customers ADD COLUMN is_deleted TINYINT(1) DEFAULT 0;
