@@ -44,6 +44,7 @@ CREATE TABLE `vehicles` (
   `status` ENUM('available', 'rented', 'maintenance', 'outOfService') DEFAULT 'available',
   `image` VARCHAR(255) DEFAULT NULL,
   `qrCode` VARCHAR(255) DEFAULT NULL,
+  `is_deleted` TINYINT(1) DEFAULT 0,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -64,6 +65,7 @@ CREATE TABLE `customers` (
   `paymentMethod` ENUM('cash', 'credit_card', 'bank_transfer') DEFAULT 'cash',
   `outstandingBalance` DECIMAL(10, 2) DEFAULT 0,
   `rentalType` ENUM('daily', 'weekly', 'monthly') DEFAULT 'weekly',
+  `is_deleted` TINYINT(1) DEFAULT 0,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

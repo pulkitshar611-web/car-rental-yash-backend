@@ -7,7 +7,7 @@ const pool = require('../../config/db');
 
 const getAllCustomers = async (req, res, next) => {
     try {
-        const [rows] = await pool.execute('SELECT * FROM customers ORDER BY created_at DESC');
+        const [rows] = await pool.execute('SELECT * FROM customers WHERE is_deleted = 0 ORDER BY created_at DESC');
         res.json(rows);
     } catch (error) {
         next(error);
@@ -16,7 +16,7 @@ const getAllCustomers = async (req, res, next) => {
 
 const getCustomerById = async (req, res, next) => {
     try {
-        const [rows] = await pool.execute('SELECT * FROM customers WHERE id = ?', [req.params.id]);
+        const [rows] = await pool.execute('SELECT * FROM customers WHERE id = ? AND is_deleted = 0', [req.params.id]);
         if (rows.length === 0) return res.status(404).json({ message: 'Customer not found' });
         res.json(rows[0]);
     } catch (error) {
@@ -29,7 +29,7 @@ const createCustomer = async (req, res, next) => {
         const { name, phone, email, idNumber, address, insurance, depositPaid, paymentMethod, outstandingBalance, rentalType } = req.body;
 
         const [result] = await pool.execute(
-            'INSERT INTO customers (name, phone, email, idNumber, address, insurance, depositPaid, paymentMethod, outstandingBalance, rentalType) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO customers (name, phone, email, idNumber, address, insurance, depositPaid, paymentMethod, outstandingBalance, rentalType, is_deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)',
             [name, phone, email || null, idNumber || null, address || null, insurance ? 1 : 0, depositPaid ? 1 : 0, paymentMethod || 'cash', outstandingBalance || 0, rentalType || 'weekly']
         );
 
@@ -97,4 +97,13 @@ const updateCustomer = async (req, res, next) => {
     }
 };
 
-module.exports = { getAllCustomers, getCustomerById, createCustomer, updateCustomer };
+const deleteCustomer = async (req, res, next) => {
+    try {
+        await pool.execute('UPDATE customers SET is_deleted = 1 WHERE id = ?', [req.params.id]);
+        res.json({ message: 'Customer deleted successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { getAllCustomers, getCustomerById, createCustomer, updateCustomer, deleteCustomer };

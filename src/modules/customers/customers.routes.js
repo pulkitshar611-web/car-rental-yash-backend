@@ -11,6 +11,7 @@ router.get('/:id', customerController.getCustomerById);
 // Admin Routes (protected)
 router.post('/', authenticate, authorize(['SUPER_ADMIN', 'MANAGER', 'STAFF']), customerController.createCustomer);
 router.put('/:id', authenticate, authorize(['SUPER_ADMIN', 'MANAGER', 'STAFF']), customerController.updateCustomer);
+router.delete('/:id', authenticate, authorize(['SUPER_ADMIN', 'MANAGER']), customerController.deleteCustomer);
 
 // Customer documents
 router.get('/:customerId/documents', authenticate, authorize(['SUPER_ADMIN', 'MANAGER', 'STAFF']), docController.getCustomerDocuments);

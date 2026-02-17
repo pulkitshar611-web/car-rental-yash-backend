@@ -5,7 +5,7 @@ const { logAction } = require('../../utils/logger');
 
 const getAllVehicles = async (req, res, next) => {
     try {
-        const [vehicles] = await pool.execute('SELECT * FROM vehicles');
+        const [vehicles] = await pool.execute('SELECT * FROM vehicles WHERE is_deleted = 0');
         res.json(vehicles);
     } catch (error) {
         next(error);
@@ -15,7 +15,7 @@ const getAllVehicles = async (req, res, next) => {
 const getVehicleById = async (req, res, next) => {
     try {
         const [vehicles] = await pool.execute(
-            'SELECT * FROM vehicles WHERE id = ?',
+            'SELECT * FROM vehicles WHERE id = ? AND is_deleted = 0',
             [req.params.id]
         );
         if (vehicles.length === 0) return res.status(404).json({ message: 'Vehicle not found' });
@@ -29,11 +29,11 @@ const getVehicleById = async (req, res, next) => {
 const createVehicle = async (req, res, next) => {
     try {
         // New Schema: name, model, plateNumber, dailyPrice, status, insuranceRequired, image
-        const { name, model, plateNumber, dailyPrice, status, insuranceRequired, image } = req.body;
+        const { name, model, plateNumber, dailyPrice, weeklyPrice, monthlyPrice, deposit, status, insuranceRequired, image } = req.body;
 
         const [result] = await pool.execute(
-            'INSERT INTO vehicles (name, model, plateNumber, dailyPrice, status, insuranceRequired, image) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [name, model, plateNumber, dailyPrice, status || 'available', insuranceRequired || 0, image || null]
+            'INSERT INTO vehicles (name, model, plateNumber, dailyPrice, weeklyPrice, monthlyPrice, deposit, status, insuranceRequired, image, is_deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)',
+            [name, model, plateNumber, dailyPrice, weeklyPrice || null, monthlyPrice || null, deposit || null, status || 'available', insuranceRequired || 0, image || null]
         );
 
         const vehicleId = result.insertId;
@@ -55,18 +55,21 @@ const createVehicle = async (req, res, next) => {
 
 const updateVehicle = async (req, res, next) => {
     try {
-        const { name, model, plateNumber, dailyPrice, status, insuranceRequired, image } = req.body;
+        const { name, model, plateNumber, dailyPrice, weeklyPrice, monthlyPrice, deposit, status, insuranceRequired, image } = req.body;
         const [oldVehicle] = await pool.execute('SELECT * FROM vehicles WHERE id = ?', [req.params.id]);
 
         if (oldVehicle.length === 0) return res.status(404).json({ message: 'Vehicle not found' });
 
         await pool.execute(
-            'UPDATE vehicles SET name=?, model=?, plateNumber=?, dailyPrice=?, status=?, insuranceRequired=?, image=? WHERE id=?',
+            'UPDATE vehicles SET name=?, model=?, plateNumber=?, dailyPrice=?, weeklyPrice=?, monthlyPrice=?, deposit=?, status=?, insuranceRequired=?, image=? WHERE id=?',
             [
                 name,
                 model,
                 plateNumber,
                 dailyPrice,
+                weeklyPrice,
+                monthlyPrice,
+                deposit,
                 status || oldVehicle[0].status,
                 insuranceRequired,
                 image,
@@ -84,10 +87,10 @@ const updateVehicle = async (req, res, next) => {
 
 const deleteVehicle = async (req, res, next) => {
     try {
-        // Instead of hard delete or missing 'deleted_at', we set status to 'outOfService'
-        await pool.execute('UPDATE vehicles SET status = "outOfService" WHERE id = ?', [req.params.id]);
+        // Soft delete: set is_deleted = 1
+        await pool.execute('UPDATE vehicles SET is_deleted = 1 WHERE id = ?', [req.params.id]);
         await logAction(req.user.id, 'DELETE_VEHICLE', 'Vehicles', req.params.id);
-        res.json({ message: 'Vehicle marked as out of service' });
+        res.json({ message: 'Vehicle deleted successfully' });
     } catch (error) {
         next(error);
     }
